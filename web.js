@@ -1,61 +1,102 @@
 var request = require("request");
 var jsdom = require("jsdom");
-var express = require("express");
 var fs = require("fs");
 
-var app = express(express.logger());
-app.use(express.bodyParser());
 
-app.get(
-	"/",
-	function(req, res) {
+var baseUrl = "http://www.legifrance.gouv.fr/";
 
-		request(
+var findRomanNumeral = function (stringContainingRomanNumeral) {};
+var convertRomanNumeralToArabicNumeral = function (romanNumeral) {};
+
+var parseDateVersion = function ($, dateVersionElement) {};
+
+var requestCode = function ($, codeUrl) {};
+var parseCode = function ($, codeElement) {
+	// GET VERSION
+	var dateVersion = $(codeElement).find("#titreTexte .sousTitreTexte").text().substr(26).split(" ");
+	console.log(dateVersion[0] + dateVersion[1] + dateVersion[2]);
+
+	var titreOuLivre = $(codeElement).find("div.data").children("ul.noType");
+	console.log(titreOuLivre.length);
+	titreOuLivre.each(
+		function (index) {
+			console.log("-- New Item --");
+			console.log(index);
+			console.log($(this).text());
+		}
+	);
+};
+var parseLivre = function ($, livreElement) {};
+var parseTitre = function ($, titreElement) {};
+var parseChapitre = function ($, chapitreElement) {};
+var parseSection = function ($, sectionElement) {};
+var parseSousSection = function ($, sousSectionElement) {};
+var parseParagraphe = function ($, paragrapheElement) {};
+
+var requestArticle = function ($, articleUrl) {};
+var parseArticle = function ($, articleElement) {};
+
+console.log("web");
+request(
+	{
+		uri: baseUrl + "initRechCodeArticle.do"
+	},
+	function (error, response, body) {
+console.log("request");
+		if (error && response.statusCode !== 200) {
+			console.log("Error when contacting " + baseUrl);
+		}
+
+		jsdom.env(
 			{
-				uri:'http://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070721'
+				html: body,
+				scripts: [
+					"http://code.jquery.com/jquery-1.6.min.js"
+				]
 			},
-			function (error, response, body) {
-				if (error && response.statusCode !== 200) {
-					console.log("Error when contacting legifrance.gouv.fr");
-				}
+			function (err, window) {
+console.log("jsdom");
+				var $ = window.jQuery;
 
-				jsdom.env(
-					{
-						html: body,
-						scripts: [
-							"http://code.jquery.com/jquery-1.5.min.js"
-						]
-					},
-					function (err, window) {
-						var $ = window.jQuery;
+				var codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
+				console.log(codeOptions.length);
 
-						// GET VERSION
-						var version = $("#titreTexte .sousTitreTexte").text().substr(26).split(" ");
-						var output = version[0] + version[1] + version[2];
+				var codes = [];
 
-						// HIERARCHY
-						//
-						// - Titre preliminaire
-						// - Livre (I-V)
-						//   - Titre
-						//     - Chapitre
-						//       - Section
-						//         - Sous-section
-						//           - Paragraphe
-						//	- Article
-						//    . creer {} 
-						//    . modifie [{}, {}, {}, ...]
-						//    . texte ""
+				codeOptions.each(
+					function () {
+						var title = $(this).attr("title");
+						var value = $(this).attr("value");
 
-						res.send(output);
+						if (-1 === value.indexOf("LEGITEXT")) {
+							return;
+						}
+
+						codes.push(
+							{
+								title: title,
+								url: baseUrl + "affichCode.do?cidTexte=" + value
+							}
+						);
 					}
 				);
+				console.log(codes);
+
+				// HIERARCHY
+				//
+				// - Titre preliminaire
+				// - Livre (I-V)
+				//   - Titre
+				//     - Chapitre
+				//       - Section
+				//         - Sous-section
+				//           - Paragraphe
+				//	- Article
+				//    . creer {} 
+				//    . modifie [{}, {}, {}, ...]
+				//    . texte ""
+
 			}
 		);
 	}
 );
-
-var port = process.env.PORT || 3000;
-app.listen(port, function() {
-	console.log("Listening on " + port);
-});
