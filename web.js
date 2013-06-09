@@ -1,4 +1,3 @@
-var request = require("request");
 var jsdom = require("jsdom");
 var fs = require("fs");
 
@@ -8,31 +7,15 @@ var baseUrl = "http://www.legifrance.gouv.fr/";
 var findRomanNumeral = function (stringContainingRomanNumeral) {};
 var convertRomanNumeralToArabicNumeral = function (romanNumeral) {};
 
-var parseDateVersion = function ($, dateVersionElement) {};
+var parseDateVersion = function (dateVersionElement) {};
 
-var requestCode = function ($, codeUrl) {
-	request(
-		{
-			uri: codeUrl
-		},
-		function (error, response, body) {
-			if (error && response.statusCode !== 200) {
-				console.log("Error when contacting " + baseUrl);
-			}
-
-			jsdom.env(
-				{
-					html: body,
-					scripts: [
-						"http://code.jquery.com/jquery-1.6.min.js"
-					]
-				},
-				function (err, window) {
-					var $ = window.jQuery;
-
-					parseCode($, "body");
-				}
-			);
+var requestCode = function (codeUrl) {
+	jsdom.env(
+		codeUrl,
+		["http://code.jquery.com/jquery-1.6.min.js"],
+		function (errors, window) {
+			var $ = window.jQuery;
+			parseCode($, "body");
 		}
 	);
 };
@@ -51,80 +34,65 @@ var parseCode = function ($, codeElement) {
 	// 	}
 	// );
 };
-var parseLivre = function ($, livreElement) {};
-var parseTitre = function ($, titreElement) {};
-var parseChapitre = function ($, chapitreElement) {};
-var parseSection = function ($, sectionElement) {};
-var parseSousSection = function ($, sousSectionElement) {};
-var parseParagraphe = function ($, paragrapheElement) {};
+var parseLivre = function (livreElement) {};
+var parseTitre = function (titreElement) {};
+var parseChapitre = function (chapitreElement) {};
+var parseSection = function (sectionElement) {};
+var parseSousSection = function (sousSectionElement) {};
+var parseParagraphe = function (paragrapheElement) {};
 
-var requestArticle = function ($, articleUrl) {};
-var parseArticle = function ($, articleElement) {};
+var requestArticle = function (articleUrl) {};
+var parseArticle = function (articleElement) {};
 
-console.log("web");
-request(
-	{
-		uri: baseUrl + "initRechCodeArticle.do"
-	},
-	function (error, response, body) {
-console.log("request");
-		if (error && response.statusCode !== 200) {
-			console.log("Error when contacting " + baseUrl);
-		}
+var requestCodes = function () {
+	jsdom.env(
+		baseUrl + "initRechCodeArticle.do",
+		["http://code.jquery.com/jquery-1.6.min.js"],
+		function (errors, window) {
+			var $ = window.jQuery;
 
-		jsdom.env(
-			{
-				html: body,
-				scripts: [
-					"http://code.jquery.com/jquery-1.6.min.js"
-				]
-			},
-			function (err, window) {
-console.log("jsdom");
-				var $ = window.jQuery;
+			var codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
+			console.log(codeOptions.length);
 
-				var codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
-				console.log(codeOptions.length);
+			var codes = [];
 
-				var codes = [];
+			codeOptions.each(
+				function () {
+					var title = $(this).attr("title");
+					var value = $(this).attr("value");
 
-				codeOptions.each(
-					function () {
-						var title = $(this).attr("title");
-						var value = $(this).attr("value");
-
-						if (-1 === value.indexOf("LEGITEXT")) {
-							return;
-						}
-
-						var url = baseUrl + "affichCode.do?cidTexte=" + value;
-						codes.push(
-							{
-								title: title,
-								url: url
-							}
-						);
-
-						requestCode($, url);
+					if (-1 === value.indexOf("LEGITEXT")) {
+						return;
 					}
-				);
-				//console.log(codes);
 
-				// HIERARCHY
-				//
-				// - Titre preliminaire
-				// - Livre (I-V)
-				//   - Titre
-				//     - Chapitre
-				//       - Section
-				//         - Sous-section
-				//           - Paragraphe
-				//	- Article
-				//    . creer {}
-				//    . modifie [{}, {}, {}, ...]
-				//    . texte ""
+					var url = baseUrl + "affichCode.do?cidTexte=" + value;
+					codes.push(
+						{
+							title: title,
+							url: url
+						}
+					);
 
-			}
-		);
-	}
-);
+					requestCode(url);
+				}
+			);
+			//console.log(codes);
+
+			// HIERARCHY
+			//
+			// - Titre preliminaire
+			// - Livre (I-V)
+			//   - Titre
+			//     - Chapitre
+			//       - Section
+			//         - Sous-section
+			//           - Paragraphe
+			//	- Article
+			//    . creer {}
+			//    . modifie [{}, {}, {}, ...]
+			//    . texte ""
+		}
+	);
+};
+
+requestCodes();

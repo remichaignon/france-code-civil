@@ -1,13 +1,13 @@
 {
-  "name"          : "france-code-civil",
-  "description"   : "This scrape the france code civil",
-  "url"           : "http://www.legifrance.gouv.fr/affichCode.do?cidTexte=LEGITEXT000006070721",
-  "keywords"      : ["france", "code", "civil"],
+  "name"          : "france-codes",
+  "description"   : "This scrapes french law text",
+  "url"           : "http://www.legifrance.gouv.fr",
+  "keywords"      : ["france", "codes", "justice"],
   "author"        : "Remi Chaignon <remi.chaignon@gmail.com>",
-  "contributors"  : [],
-  "dependencies"  : { "jsdom": ">=0.2.10", 
-                      "express": ">=0.0.1", 
-                      "request": ">=2.9.3" },
   "version"       : "0.0.1",
-  "engines"       : { "node": ">=0.4.7" }
+  "dependencies"  : {
+    "jsdom":   "0.6.x",
+    "express": "3.x"
+  },
+  "engines"       : { "node": "0.8.x" }
 }
