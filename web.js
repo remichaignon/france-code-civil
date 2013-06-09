@@ -10,7 +10,32 @@ var convertRomanNumeralToArabicNumeral = function (romanNumeral) {};
 
 var parseDateVersion = function ($, dateVersionElement) {};
 
-var requestCode = function ($, codeUrl) {};
+var requestCode = function ($, codeUrl) {
+	request(
+		{
+			uri: codeUrl
+		},
+		function (error, response, body) {
+			if (error && response.statusCode !== 200) {
+				console.log("Error when contacting " + baseUrl);
+			}
+
+			jsdom.env(
+				{
+					html: body,
+					scripts: [
+						"http://code.jquery.com/jquery-1.6.min.js"
+					]
+				},
+				function (err, window) {
+					var $ = window.jQuery;
+
+					parseCode($, "body");
+				}
+			);
+		}
+	);
+};
 var parseCode = function ($, codeElement) {
 	// GET VERSION
 	var dateVersion = $(codeElement).find("#titreTexte .sousTitreTexte").text().substr(26).split(" ");
@@ -18,13 +43,13 @@ var parseCode = function ($, codeElement) {
 
 	var titreOuLivre = $(codeElement).find("div.data").children("ul.noType");
 	console.log(titreOuLivre.length);
-	titreOuLivre.each(
-		function (index) {
-			console.log("-- New Item --");
-			console.log(index);
-			console.log($(this).text());
-		}
-	);
+	// titreOuLivre.each(
+	// 	function (index) {
+	// 		console.log("-- New Item --");
+	// 		console.log(index);
+	// 		console.log($(this).text());
+	// 	}
+	// );
 };
 var parseLivre = function ($, livreElement) {};
 var parseTitre = function ($, titreElement) {};
@@ -72,15 +97,18 @@ console.log("jsdom");
 							return;
 						}
 
+						var url = baseUrl + "affichCode.do?cidTexte=" + value;
 						codes.push(
 							{
 								title: title,
-								url: baseUrl + "affichCode.do?cidTexte=" + value
+								url: url
 							}
 						);
+
+						requestCode($, url);
 					}
 				);
-				console.log(codes);
+				//console.log(codes);
 
 				// HIERARCHY
 				//
@@ -92,7 +120,7 @@ console.log("jsdom");
 				//         - Sous-section
 				//           - Paragraphe
 				//	- Article
-				//    . creer {} 
+				//    . creer {}
 				//    . modifie [{}, {}, {}, ...]
 				//    . texte ""
 
