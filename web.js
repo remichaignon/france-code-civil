@@ -49,6 +49,7 @@ var requestCodes = function () {
 		baseUrl + "initRechCodeArticle.do",
 		["http://code.jquery.com/jquery-1.6.min.js"],
 		function (errors, window) {
+			var index = 1;
 			var $ = window.jQuery;
 
 			var codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
@@ -59,21 +60,60 @@ var requestCodes = function () {
 			codeOptions.each(
 				function () {
 					var title = $(this).attr("title");
-					var value = $(this).attr("value");
 
-					if (-1 === value.indexOf("LEGITEXT")) {
+					if (!title) {
 						return;
 					}
 
-					var url = baseUrl + "affichCode.do?cidTexte=" + value;
+					var value = $(this).attr("value");
+
+					if (!value) {
+						return;
+					}
+					if (-1 === value.indexOf("LEGITEXT")) {
+						console.log("ERROR - Value invalid for title: " + title);
+						return;
+					}
+
+					var safeName = title.toLowerCase();
+					safeName = safeName.replace(/[àáäâ]/g, "a");
+					safeName = safeName.replace(/[èéëê]/g, "e");
+					safeName = safeName.replace(/[ìíïî]/g, "i");
+					safeName = safeName.replace(/[òóöô]/g, "o");
+					safeName = safeName.replace(/[ùúüû]/g, "u");
+					safeName = safeName.replace(/[æ]/g, "ae");
+					safeName = safeName.replace(/[œ]/g, "oe");
+					safeName = safeName.replace(/[(),]/g, "");
+					safeName = safeName.replace(/[^a-zA-Z0-9]/g, "-");
+
+					var href = "codes/" + safeName + ".json";
+
 					codes.push(
 						{
-							title: title,
-							url: url
+							id: index,
+							name: title,
+							href: href
 						}
 					);
 
-					requestCode(url);
+					var url = baseUrl + "affichCode.do?cidTexte=" + value;
+					//requestCode(url);
+
+					fs.writeFile(
+						href,
+						"{}",
+						function (error) {
+							if (error) {
+								console.log("ERROR - Could not save file, see error below.");
+								console.log(error);
+							}
+							else {
+								console.log("SUCCESS - The file " + href + " was saved!");
+							}
+						}
+					);
+
+					index++;
 				}
 			);
 			//console.log(codes);
