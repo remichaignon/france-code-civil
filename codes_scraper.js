@@ -88,23 +88,22 @@ var requestCodes = function () {
 
 					var href = "codes/" + safeName + ".json";
 
-					codes.push(
-						{
-							id: index,
-							name: title,
-							href: href
-						}
-					);
+					var codeData = {
+						id: index,
+						name: title,
+						href: href
+					};
+					codes.push(codeData);
 
 					var url = baseUrl + "affichCode.do?cidTexte=" + value;
 					//requestCode(url);
 
 					fs.writeFile(
 						href,
-						"{}",
+						JSON.stringify(codeData),
 						function (error) {
 							if (error) {
-								console.log("ERROR - Could not save file, see error below.");
+								console.log("ERROR - Could not save file " + href + ", see error below.");
 								console.log(error);
 							}
 							else {
@@ -117,6 +116,22 @@ var requestCodes = function () {
 				}
 			);
 			//console.log(codes);
+
+			fs.writeFile(
+				"codes.json",
+				JSON.stringify(codes),
+				function (error) {
+					if (error) {
+						console.log("ERROR - Could not save file codes.json, see error below.");
+						console.log(error);
+					}
+					else {
+						console.log("SUCCESS - The file codes.json was saved!");
+					}
+				}
+			);
+
+
 
 			// HIERARCHY
 			//
