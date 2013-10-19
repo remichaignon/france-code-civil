@@ -4,25 +4,62 @@ var fs = require("fs");
 
 var baseUrl = "http://www.legifrance.gouv.fr/";
 
+
+// UTILS
+var replaceSpecialCharacters = function (string) {
+	return string.replace(/[àáäâ]/g, "a").replace(/[èéëê]/g, "e").replace(/[ìíïî]/g, "i").replace(/[òóöô]/g, "o").replace(/[ùúüû]/g, "u").replace(/[æ]/g, "ae").replace(/[œ]/g, "oe");
+};
+
+var replaceNonAlphaNumericalCharactersByDashes = function (string) {
+	return string.replace(/[(),]/g, "").replace(/[^a-zA-Z0-9]/g, "-");
+};
+
+var replaceMonthStringByMonthIndex = function (monthString) {
+	var monthStringWithoutAccents = replaceSpecialCharacters(monthString.toLowerCase()),
+		months = {
+			"janvier": 1,
+			"fevrier": 2,
+			"mars": 3,
+			"avril": 4,
+			"mai": 5,
+			"juin": 6,
+			"juillet": 7,
+			"aout": 8,
+			"septembre": 9,
+			"octobre": 10,
+			"novembre": 11,
+			"decembre": 12
+		};
+
+	return months[monthStringWithoutAccents];
+};
+
 var findRomanNumeral = function (stringContainingRomanNumeral) {};
 var convertRomanNumeralToArabicNumeral = function (romanNumeral) {};
 
+
+// SUB-SECTION
+var parseLivre = function (livreElement) {};
+var parseTitre = function (titreElement) {};
+var parseChapitre = function (chapitreElement) {};
+var parseSection = function (sectionElement) {};
+var parseSousSection = function (sousSectionElement) {};
+var parseParagraphe = function (paragrapheElement) {};
+
+
+var requestArticle = function (articleUrl) {};
+var parseArticle = function (articleElement) {};
+
+
+// CODE
 var parseDateVersion = function (dateVersionElement) {};
 
-var requestCode = function (codeUrl) {
-	jsdom.env(
-		codeUrl,
-		["http://code.jquery.com/jquery-1.6.min.js"],
-		function (errors, window) {
-			var $ = window.jQuery;
-			parseCode($, "body");
-		}
-	);
-};
 var parseCode = function ($, codeElement) {
-	// GET VERSION
 	var dateVersion = $(codeElement).find("#titreTexte .sousTitreTexte").text().substr(26).split(" ");
-	console.log(dateVersion[0] + dateVersion[1] + dateVersion[2]);
+
+	if (3 === dateVersion.length) {
+		console.log(dateVersion[2] + "-" + replaceMonthStringByMonthIndex(dateVersion[1]) + "-" + dateVersion[0]);
+	}
 
 	var titreOuLivre = $(codeElement).find("div.data").children("ul.noType");
 	console.log(titreOuLivre.length);
@@ -34,120 +71,123 @@ var parseCode = function ($, codeElement) {
 	// 	}
 	// );
 };
-var parseLivre = function (livreElement) {};
-var parseTitre = function (titreElement) {};
-var parseChapitre = function (chapitreElement) {};
-var parseSection = function (sectionElement) {};
-var parseSousSection = function (sousSectionElement) {};
-var parseParagraphe = function (paragrapheElement) {};
 
-var requestArticle = function (articleUrl) {};
-var parseArticle = function (articleElement) {};
+var requestCode = function (codeUrl) {
+	jsdom.env(
+		codeUrl,
+		["http://code.jquery.com/jquery-1.6.min.js"],
+		function (errors, window) {
+			var $ = window.jQuery;
+			parseCode($, "body");
+		}
+	);
+};
+
+
+// CODES
+var parseCodes = function ($, codeOptions) {
+	var codes = [];
+
+	codeOptions.each(
+		function () {
+			var index = 1,
+				title = $(this).attr("title"),
+				value = $(this).attr("value");
+
+			if (!title) {
+				return;
+			}
+			if (!value) {
+				return;
+			}
+			if (-1 === value.indexOf("LEGITEXT")) {
+				console.log("ERROR - Value invalid for title: " + title);
+				return;
+			}
+
+			var safeName = title.toLowerCase();
+			safeName = replaceSpecialCharacters(safeName);
+			safeName = replaceNonAlphaNumericalCharactersByDashes(safeName);
+
+			var href = "codes/" + safeName + ".json";
+
+			var codeData = {
+				id: index,
+				name: title,
+				href: href
+			};
+			codes.push(codeData);
+
+			fs.writeFile(
+				href,
+				JSON.stringify({ code: codeData }),
+				function (error) {
+					if (error) {
+						console.log("ERROR - Could not save file " + href + ", see error below.");
+						console.log(error);
+					}
+					else {
+						console.log("SUCCESS - The file " + href + " was saved!");
+					}
+				}
+			);
+
+			var url = baseUrl + "affichCode.do?cidTexte=" + value;
+			requestCode(url);
+
+			index++;
+		}
+	);
+
+	fs.writeFile(
+		"codes.json",
+		JSON.stringify({ codes: codes }),
+		function (error) {
+			if (error) {
+				console.log("ERROR - Could not save file codes.json, see error below.");
+				console.log(error);
+			}
+			else {
+				console.log("SUCCESS - The file codes.json was saved!");
+			}
+		}
+	);
+};
 
 var requestCodes = function () {
 	jsdom.env(
 		baseUrl + "initRechCodeArticle.do",
 		["http://code.jquery.com/jquery-1.6.min.js"],
 		function (errors, window) {
-			var index = 1;
-			var $ = window.jQuery;
+			var $ = window.jQuery,
+				codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
 
-			var codeOptions = $("form[name=rechCodeArticleForm] span.selectCode select#champ1 option");
-			console.log(codeOptions.length);
-
-			var codes = [];
-
-			codeOptions.each(
-				function () {
-					var title = $(this).attr("title");
-
-					if (!title) {
-						return;
-					}
-
-					var value = $(this).attr("value");
-
-					if (!value) {
-						return;
-					}
-					if (-1 === value.indexOf("LEGITEXT")) {
-						console.log("ERROR - Value invalid for title: " + title);
-						return;
-					}
-
-					var safeName = title.toLowerCase();
-					safeName = safeName.replace(/[àáäâ]/g, "a");
-					safeName = safeName.replace(/[èéëê]/g, "e");
-					safeName = safeName.replace(/[ìíïî]/g, "i");
-					safeName = safeName.replace(/[òóöô]/g, "o");
-					safeName = safeName.replace(/[ùúüû]/g, "u");
-					safeName = safeName.replace(/[æ]/g, "ae");
-					safeName = safeName.replace(/[œ]/g, "oe");
-					safeName = safeName.replace(/[(),]/g, "");
-					safeName = safeName.replace(/[^a-zA-Z0-9]/g, "-");
-
-					var href = "codes/" + safeName + ".json";
-
-					var codeData = {
-						id: index,
-						name: title,
-						href: href
-					};
-					codes.push(codeData);
-
-					var url = baseUrl + "affichCode.do?cidTexte=" + value;
-					//requestCode(url);
-
-					fs.writeFile(
-						href,
-						JSON.stringify(codeData),
-						function (error) {
-							if (error) {
-								console.log("ERROR - Could not save file " + href + ", see error below.");
-								console.log(error);
-							}
-							else {
-								console.log("SUCCESS - The file " + href + " was saved!");
-							}
-						}
-					);
-
-					index++;
-				}
-			);
-			//console.log(codes);
-
-			fs.writeFile(
-				"codes.json",
-				JSON.stringify(codes),
-				function (error) {
-					if (error) {
-						console.log("ERROR - Could not save file codes.json, see error below.");
-						console.log(error);
-					}
-					else {
-						console.log("SUCCESS - The file codes.json was saved!");
-					}
-				}
-			);
-
-
-
-			// HIERARCHY
-			//
-			// - Titre preliminaire
-			// - Livre (I-V)
-			//   - Titre
-			//     - Chapitre
-			//       - Section
-			//         - Sous-section
-			//           - Paragraphe
-			//	- Article
-			//    . creer {}
-			//    . modifie [{}, {}, {}, ...]
-			//    . texte ""
+			parseCodes($, codeOptions);
 		}
 	);
 };
 
+
+// START
 requestCodes();
+
+
+// ========================================
+// HIERARCHY
+//
+// - Titre preliminaire
+// - Partie
+// 	 - Livre (I-V)
+//     - Titre
+//       - Chapitre
+//         - Section
+//           - Sous-section
+//             - Paragraphe
+//	- Article
+//    . creer {}
+//    . modifie [{}, {}, {}, ...]
+//    . texte ""
+//    . cite [{}, {}, {}, ...]
+//    . cite par [{}, {}, {}, ...]
+//    . codifie par [{}, {}, {}, ...]
+//    . anciens textes [{}, {}, {}, ...]
